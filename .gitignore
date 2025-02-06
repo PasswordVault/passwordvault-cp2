@@ -4,6 +4,8 @@ lib/
 env/
 unused/
 tmp/
+doc/
+simulation/
 .env
 *.uf2
 
