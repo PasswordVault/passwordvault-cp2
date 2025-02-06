@@ -1,0 +1,9 @@
+passwd.*
+__pycache__/
+lib/
+env/
+unused/
+tmp/
+.env
+*.uf2
+
