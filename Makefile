@@ -1,7 +1,6 @@
 #
-passwd.mpy: passwd.txt
-	python3 mkdb.py > passwd.py
-	~/Dokumente/circuitpython/mpy-cross/build/mpy-cross passwd.py 
+passwd.txt: passwd.raw
+	python3 mkdb.py
 
 clean::
-	rm -f passwd.mpy
+	rm -f passwd.txt

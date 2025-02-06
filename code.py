@@ -10,10 +10,11 @@ https://passwordvault.de
 '''
 from adafruit_hid.keyboard import Keyboard
 from keyboard_layout_win_de import KeyboardLayout
+import dbase
 import disp
+import gc
 import math
 import os
-import passwd
 import usb_hid
 import time
 import xxtea
@@ -23,6 +24,8 @@ PV_VERSION = "1.0"
 app = None
 screen = None
 pv_password = None
+db = None
+count = 0
 
 class Screen():
 
@@ -67,10 +70,10 @@ class Screen():
         return self.lcd.hline(x,y, w, color)
 
     def show_header(self, prompt, title):
-        self.fill_rect(0,0, self.width,8, self.lcd.BLACK)
+        self.fill_rect(0,0, self.width-24,8, self.lcd.BLACK)
         self.text(prompt, 0,4, self.lcd.WHITE)
         self.text(title, 10,4, self.lcd.WHITE)
-        self.hline(0,10, self.width, self.lcd.GBLUE)
+        self.hline(0,10, self.width-24, self.lcd.GBLUE)
 
     def show(self):
         pass
@@ -106,7 +109,8 @@ class App:
         return (pressed, released, changed_keys)
 
     def goto(self, page_name, **kwargs):
-        print(f"goto {page_name}", kwargs)
+        gc.collect()
+        print(f"goto {page_name} mem({gc.mem_free()})", kwargs)
         screen.clear()
         self.page = self.pages[page_name]
         self.page.setup(**kwargs)
@@ -198,7 +202,7 @@ class TextEntry:
         top = 88
         screen.text("passwordvault.de", 0,top+8, screen.lcd.GREEN)
         screen.text(PV_VERSION, 40,top+18, screen.lcd.WHITE)
-        print(f"DISPLAY {screen.width}x{screen.height}")
+        #print(f"DISPLAY {screen.width}x{screen.height}")
 
     def on_key_pressed(self, keys):
         '''
@@ -273,7 +277,6 @@ class UnlockPage:
             app.goto('lock', message="Try again")
 
 
-
 class FilterPage(TextEntry):
     '''
     Show a keyboard to filter entries.
@@ -290,24 +293,16 @@ class FilterPage(TextEntry):
     def setup(self, input = ""):
         super().setup(input, keys="abcdefghijklmnopqrstuvwxyz0123<456789/->")
 
-    def update(self):
+    def count(self):
         global count
+        count = db.count(self.input)
+
+    def update(self):
         if self.input == self.last_input:
             return
         self.last_input = self.input
-
-        db = usqlite.connect(PASSWORDS_DB)
-        sql = "select count(*) from password"
-        if self.input != "":
-            sql += f" where name like '{self.input}%'"
-
-        with db.execute(sql) as cur:
-            row = cur.fetchone()
-            count = int(row[0])
-            self.message = f"{count} entries"
-        db.close()
-        dbmem()
-        print("New count", count)
+        self.count()
+        self.message = f"{count} entries"
         self.dirty = True
 
 
@@ -337,30 +332,21 @@ class ListPage:
             return
         self.prev_scroll_top = self.scroll_top
 
-        self.entries = []
-        fav = 1 if self.favs else 0
-        sql = f"select name,password from password where fav={fav}"
-        if self.input != "":
-            sql += f" and name like '{self.input}%'"
-        sql += f" limit {self.scroll_top},{self.SCREEN_LINES}"
-        print("SQL", sql)
-
-        db = usqlite.connect(PASSWORDS_DB)
-        with db.execute(sql) as cur:
-            for row in cur:
-                self.entries.append({ 'name':row[0], 'password':row[1] })
-        db.close()
-        dbmem()
+        if self.favs:
+            self.entries = db.favs(self.scroll_top, self.SCREEN_LINES)
+        else:
+            self.entries = db.filter(self.input, self.scroll_top, self.SCREEN_LINES)
         screen.clear()
         self.dirty = True
 
     def show_key_labels(self):
         labels = ['NXT', ' UP', 'DWN', 'SEL']
         for i,y in enumerate([1, 39, 75, screen.height - 15]):
-            screen.fill_rect(screen.width - 24,y, 24,9, screen.lcd.YELLOW)
-            screen.text(labels[i], screen.width - 24, y+1, screen.lcd.BLACK)
+            screen.fill_rect(screen.width - 24,y, 24,10, screen.lcd.YELLOW)
+            screen.text(labels[i], screen.width - 22, y+5, screen.lcd.BLACK)
 
     def draw(self):
+        screen.clear()
         screen.show_header(self.prompt, self.input)
 
         i = 0
@@ -368,9 +354,9 @@ class ListPage:
             pos_x = 0
             pos_y = 16 + 10 * i
             if i == self.curr_screen_line:
-                screen.text(entry['name'], pos_x,pos_y, screen.lcd.GBLUE)
+                screen.text(entry, pos_x,pos_y, screen.lcd.GBLUE)
             else:
-                screen.text(entry['name'], pos_x,pos_y, screen.lcd.WHITE)
+                screen.text(entry, pos_x,pos_y, screen.lcd.WHITE)
             i += 1
         self.show_key_labels()
 
@@ -398,7 +384,7 @@ class ListPage:
 
         else:
             self.dirty = False
-        print("curr_screen_line", self.curr_screen_line, "count", count, "scroll_top", self.scroll_top)
+        print("curr_screen_line", self.curr_screen_line, "count", count, "scroll_top", self.scroll_top, "mem", gc.mem_free())
 
 
 class FavPage(ListPage):
@@ -499,7 +485,7 @@ app = App({
 })
 
 pv_password = os.getenv("PV_PASSWORD")
-
+db = dbase.Database()
 app.goto('lock')
 app.run()
 

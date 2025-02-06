@@ -9,9 +9,10 @@ import busio
 import digitalio
 import displayio
 import fourwire
+import gc
 import terminalio
 
-from adafruit_display_text import label
+from adafruit_display_text import bitmap_label
 #from adafruit_display_text.scrolling_label import ScrollingLabel
 from adafruit_display_shapes import line, rect
 
@@ -56,11 +57,13 @@ class Display(ST7735R):
         return self.pins[i].value
 
     def clear(self):
+        self.root_group = None
+        gc.collect()
         splash = displayio.Group()
         self.root_group = splash
 
     def text(self, txt, x,y, color):
-        lbl = label.Label(terminalio.FONT, text=txt, color=color, x=x, y=y, anchor_point=(0,0))
+        lbl = bitmap_label.Label(terminalio.FONT, text=txt, color=color, x=x, y=y, anchor_point=(0,0), save_text=False)
         self.root_group.append(lbl)
 
     def hline(self, x,y, w, color):
