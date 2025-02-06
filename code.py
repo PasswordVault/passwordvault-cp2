@@ -175,6 +175,7 @@ class TextEntry:
             screen.text(labels[self.mode][i], screen.width - 22, y+5, screen.lcd.BLACK)
 
     def draw(self):
+        screen.clear()
         x = y = 0
         screen.show_header(self.prompt, self.input)
 
@@ -402,50 +403,35 @@ class DetailPage:
         self.color = screen.lcd.WHITE
 
         try:
-            self.password = crypto.decrypt(self.entry['password'], PASSWORD)
+            password = db.get(entry)
+            self.password = xxtea.decryptFromBase64(password, pv_password)
             print("Passwd", self.password)
-            #self.password = self.entry['password']
             self.type_and_fav()
         except ValueError as e:
             print(e)
             self.password = "Error"
-            self.color = screen.RED
+            self.color = screen.lcd.RED
 
     def type_and_fav(self):
         print("Type")
-        for c in self.password:
-            n = 100
-            while n > 0:
-                if kbd.is_open():
-                    break
-                n -= 1
-                time.sleep_ms(10)
-            if not kbd.is_open():
-                print("Keyboard not open")
-                break
-            code = key_code(c)
-            print(code)
-            kbd.send_keys(code)
-            time.sleep_ms(10)
-        print("Fav")
+        kbd = Keyboard(usb_hid.devices)
+        layout = KeyboardLayout(kbd)
+        layout.write(self.password)
         self.write_fav()
         print("Done.")
 
     def write_fav(self):
         print("Writing fav...")
-        db = usqlite.connect(PASSWORDS_DB)
-        db.execute(f"update password set fav=1 where name='{self.entry['name']}'")
-        db.close()
-        dbmem()
+        db.add_fav(self.entry)
 
     def show_key_labels(self):
         y = 1
         label = 'NXT'
-        screen.fill_rect(screen.width - 24,y, 24,9, screen.lcd.YELLOW)
-        screen.text(label, screen.width - 24, y+1, screen.lcd.BLACK)
+        screen.fill_rect(screen.width - 24,y, 24,10, screen.lcd.YELLOW)
+        screen.text(label, screen.width - 22, y+5, screen.lcd.BLACK)
 
     def draw(self):
-        screen.show_header(":", self.entry['name'])
+        screen.show_header(":", self.entry)
         screen.text(self.password, 0,50, self.color)
         self.show_key_labels()
 
