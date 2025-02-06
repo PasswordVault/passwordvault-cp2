@@ -11,13 +11,18 @@ https://passwordvault.de
 from adafruit_hid.keyboard import Keyboard
 from keyboard_layout_win_de import KeyboardLayout
 import disp
+import math
 import os
+import passwd
 import usb_hid
 import time
 import xxtea
 
+PV_VERSION = "1.0"
+
 app = None
 screen = None
+pv_password = None
 
 class Screen():
 
@@ -25,16 +30,16 @@ class Screen():
         self.lcd = disp.Display()
         #self.backlight(0.5)
         #self.clear()
-    
+
     def config_buttons(self):
         return self.lcd.config_buttons()
-    
+
     def button(self, i):
         return self.lcd.button(i)
 
     def example(self):
         return self.lcd.example()
-    
+
     @property
     def width(self):
         return self.lcd.width
@@ -48,23 +53,23 @@ class Screen():
         pwm = PWM(pin)
         pwm.freq(1000)
         pwm.duty_u16(round(65536 * percent))
-    
+
     def clear(self):
         self.lcd.clear()
-    
+
     def fill_rect(self, x,y, w,h, color):
         return self.lcd.fill_rect(x,y, w,h, color)
 
     def text(self, txt, x,y, color):
         return self.lcd.text(txt, x,y, color)
-    
+
     def hline(self, x,y, w, color):
         return self.lcd.hline(x,y, w, color)
 
     def show_header(self, prompt, title):
         self.fill_rect(0,0, self.width,8, self.lcd.BLACK)
-        self.text(prompt, 0,0, self.lcd.WHITE)
-        self.text(title, 10,0, self.lcd.WHITE)
+        self.text(prompt, 0,4, self.lcd.WHITE)
+        self.text(title, 10,4, self.lcd.WHITE)
         self.hline(0,10, self.width, self.lcd.GBLUE)
 
     def show(self):
@@ -99,7 +104,7 @@ class App:
                 released = True
                 changed_keys[i] = True
         return (pressed, released, changed_keys)
-    
+
     def goto(self, page_name, **kwargs):
         print(f"goto {page_name}", kwargs)
         screen.clear()
@@ -162,8 +167,8 @@ class TextEntry:
             'h': ['SEL', 'LFT', 'RGT', 'VER'],
         }
         for i,y in enumerate([1, 39, 75, screen.height - 15]):
-            screen.fill_rect(screen.width - 24,y, 24,9, screen.lcd.YELLOW)
-            screen.text(labels[self.mode][i], screen.width - 24, y+1, screen.lcd.BLACK)
+            screen.fill_rect(screen.width - 24,y, 24,10, screen.lcd.YELLOW)
+            screen.text(labels[self.mode][i], screen.width - 22, y+5, screen.lcd.BLACK)
 
     def draw(self):
         x = y = 0
@@ -174,7 +179,7 @@ class TextEntry:
             pos_x = round(self.x_offs + x * self.CELL_WIDTH)
             pos_y = round(self.Y_OFFSET + y * self.CELL_HEIGHT)
             if x == self.cursor_x and y == self.cursor_y:
-                screen.text(c, pos_x, pos_y, screen.lcd.GBLUE) 
+                screen.text(c, pos_x, pos_y, screen.lcd.GBLUE)
             else:
                 screen.text(c, pos_x, pos_y, screen.lcd.WHITE)
             x += 1
@@ -193,7 +198,7 @@ class TextEntry:
         top = 88
         screen.text("passwordvault.de", 0,top+8, screen.lcd.GREEN)
         screen.text(PV_VERSION, 40,top+18, screen.lcd.WHITE)
-        print(f"DISPLAY TYPE {app.display_type} {screen.width}x{screen.height}")
+        print(f"DISPLAY {screen.width}x{screen.height}")
 
     def on_key_pressed(self, keys):
         '''
@@ -262,10 +267,205 @@ class LockPage(TextEntry):
 class UnlockPage:
 
     def setup(self, input):
-        if input == PASSWORD:
+        if input == pv_password:
             app.goto('filter')
         else:
             app.goto('lock', message="Try again")
+
+
+
+class FilterPage(TextEntry):
+    '''
+    Show a keyboard to filter entries.
+    Press KEY3 to flip through screens with the filter applied:
+     - Favorites
+     - All
+     - Set filter
+    '''
+    def __init__(self):
+        # Next screen will be 'list' if a filter term is given, else 'fav'
+        super().__init__("", 10, lambda input: 'list' if input != "" else 'fav')
+        self.last_input = None
+
+    def setup(self, input = ""):
+        super().setup(input, keys="abcdefghijklmnopqrstuvwxyz0123<456789/->")
+
+    def update(self):
+        global count
+        if self.input == self.last_input:
+            return
+        self.last_input = self.input
+
+        db = usqlite.connect(PASSWORDS_DB)
+        sql = "select count(*) from password"
+        if self.input != "":
+            sql += f" where name like '{self.input}%'"
+
+        with db.execute(sql) as cur:
+            row = cur.fetchone()
+            count = int(row[0])
+            self.message = f"{count} entries"
+        db.close()
+        dbmem()
+        print("New count", count)
+        self.dirty = True
+
+
+class ListPage:
+
+    SCREEN_LINES = 11
+
+    def setup(self, input, favs = False):
+        self.dirty = True
+        self.input = input
+        self.favs = favs
+
+        if favs:
+            self.prompt = '*'
+            self.next_page = 'list'
+        else:
+            self.prompt = '#'
+            self.next_page = 'filter'
+
+        self.scroll_top = 0
+        self.prev_scroll_top = -1
+        self.curr_screen_line = 0
+        self.entries = []
+
+    def update(self):
+        if self.prev_scroll_top == self.scroll_top:
+            return
+        self.prev_scroll_top = self.scroll_top
+
+        self.entries = []
+        fav = 1 if self.favs else 0
+        sql = f"select name,password from password where fav={fav}"
+        if self.input != "":
+            sql += f" and name like '{self.input}%'"
+        sql += f" limit {self.scroll_top},{self.SCREEN_LINES}"
+        print("SQL", sql)
+
+        db = usqlite.connect(PASSWORDS_DB)
+        with db.execute(sql) as cur:
+            for row in cur:
+                self.entries.append({ 'name':row[0], 'password':row[1] })
+        db.close()
+        dbmem()
+        screen.clear()
+        self.dirty = True
+
+    def show_key_labels(self):
+        labels = ['NXT', ' UP', 'DWN', 'SEL']
+        for i,y in enumerate([1, 39, 75, screen.height - 15]):
+            screen.fill_rect(screen.width - 24,y, 24,9, screen.lcd.YELLOW)
+            screen.text(labels[i], screen.width - 24, y+1, screen.lcd.BLACK)
+
+    def draw(self):
+        screen.show_header(self.prompt, self.input)
+
+        i = 0
+        for entry in self.entries:
+            pos_x = 0
+            pos_y = 16 + 10 * i
+            if i == self.curr_screen_line:
+                screen.text(entry['name'], pos_x,pos_y, screen.lcd.GBLUE)
+            else:
+                screen.text(entry['name'], pos_x,pos_y, screen.lcd.WHITE)
+            i += 1
+        self.show_key_labels()
+
+    def on_key_pressed(self, keys):
+        self.dirty = True
+        if keys[2]:                # UP
+            if self.curr_screen_line > 0:
+                self.curr_screen_line -= 1
+            elif self.scroll_top > 0:
+                self.scroll_top -= 1
+
+        elif keys[1]:              # DOWN
+            if self.curr_screen_line < min(self.SCREEN_LINES-1, count-1):
+                self.curr_screen_line += 1
+            elif self.curr_screen_line == self.SCREEN_LINES-1 and self.scroll_top < count - self.SCREEN_LINES:
+                self.scroll_top += 1
+
+        elif keys[0]:              # SELECT
+            app.goto('detail',
+                entry=self.entries[self.curr_screen_line],
+                input=self.input)
+
+        elif keys[3]:              # NEXT
+            app.goto(self.next_page, input=self.input)
+
+        else:
+            self.dirty = False
+        print("curr_screen_line", self.curr_screen_line, "count", count, "scroll_top", self.scroll_top)
+
+
+class FavPage(ListPage):
+
+    def setup(self, input):
+        super().setup(input, favs = True)
+
+
+class DetailPage:
+
+    def setup(self, entry, input):
+        self.dirty = True
+        self.entry = entry
+        self.input = input
+        self.color = screen.lcd.WHITE
+
+        try:
+            self.password = crypto.decrypt(self.entry['password'], PASSWORD)
+            print("Passwd", self.password)
+            #self.password = self.entry['password']
+            self.type_and_fav()
+        except ValueError as e:
+            print(e)
+            self.password = "Error"
+            self.color = screen.RED
+
+    def type_and_fav(self):
+        print("Type")
+        for c in self.password:
+            n = 100
+            while n > 0:
+                if kbd.is_open():
+                    break
+                n -= 1
+                time.sleep_ms(10)
+            if not kbd.is_open():
+                print("Keyboard not open")
+                break
+            code = key_code(c)
+            print(code)
+            kbd.send_keys(code)
+            time.sleep_ms(10)
+        print("Fav")
+        self.write_fav()
+        print("Done.")
+
+    def write_fav(self):
+        print("Writing fav...")
+        db = usqlite.connect(PASSWORDS_DB)
+        db.execute(f"update password set fav=1 where name='{self.entry['name']}'")
+        db.close()
+        dbmem()
+
+    def show_key_labels(self):
+        y = 1
+        label = 'NXT'
+        screen.fill_rect(screen.width - 24,y, 24,9, screen.lcd.YELLOW)
+        screen.text(label, screen.width - 24, y+1, screen.lcd.BLACK)
+
+    def draw(self):
+        screen.show_header(":", self.entry['name'])
+        screen.text(self.password, 0,50, self.color)
+        self.show_key_labels()
+
+    def on_key_pressed(self, keys):
+        if keys[3]:
+            app.goto('fav', input = self.input)
 
 
 class DummyPage:
@@ -291,6 +491,11 @@ screen = Screen()
 app = App({
     'dummy': DummyPage(),
     'lock': LockPage(),
+    'unlock': UnlockPage(),
+    'filter': FilterPage(),
+    'fav': FavPage(),
+    'list': ListPage(),
+    'detail': DetailPage(),
 })
 
 pv_password = os.getenv("PV_PASSWORD")
