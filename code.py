@@ -316,6 +316,9 @@ class ListPage:
 
     SCREEN_LINES = 11
 
+    def __init__(self):
+        self.saved_input = None
+
     def setup(self, input, favs = False):
         self.dirty = True
         self.input = input
