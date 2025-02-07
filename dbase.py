@@ -47,14 +47,18 @@ class Database:
 
     def get(self, input):
         for fname in [FRESHNAME, FNAME]:
-            with open(fname) as f:
-                while True:
-                    line = f.readline()
-                    if not line:
-                        break
-                    name, passwd = line.split("\t", 1)
-                    if name == input:
-                        return passwd.rstrip()
+            try:
+                with open(fname) as f:
+                    while True:
+                        line = f.readline()
+                        if not line:
+                            break
+                        name, passwd = line.split("\t", 1)
+                        if name == input:
+                            return passwd.rstrip()
+            except OSError:
+                # Ignore non-existing fresh.txt
+                pass
         return None
 
     def put(self, new_name, new_password):
