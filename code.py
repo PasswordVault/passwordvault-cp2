@@ -293,8 +293,8 @@ class FilterPage(TextEntry):
         super().__init__("", 10, lambda input: 'list' if input != "" else 'fav')
         self.last_input = None
 
-    def setup(self, input = ""):
-        super().setup(input, keys=NAME_KEYS)
+    def setup(self, input = "", message = "Filter entries"):
+        super().setup(input, message, keys=NAME_KEYS)
 
     def count(self):
         global count
@@ -400,17 +400,17 @@ class DetailPage:
 
     CHARS = {
         'a': "abcdefghijklmnopqrstuvwxyz",
-        'A': "",
-        '9': "0123456789",
-        ';': "!'$%&/()=+*#-_.:,;",
+        '9': list("0123456789"),
+        ';': list("!'$%&/()=+*#-_.:,;"),
     }
     def __init__(self):
-        self.CHARS["A"] = self.CHARS["A"].upper()
+        self.CHARS["A"] = list(self.CHARS["a"].upper())
+        self.CHARS["a"] = list(self.CHARS["a"])
 
     def gen(self):
         passwd = ""
         for i in range(12):
-            sel = random.choice(self.CHARS.keys())
+            sel = random.choice(list(self.CHARS.keys()))
             passwd += random.choice(self.CHARS[sel])
         return passwd
 
@@ -468,6 +468,8 @@ class GenPage(TextEntry):
     def __init__(self):
         super().__init__(NAME_KEYS, 10, lambda input: 'detail' if input != "" else 'filter', '!')
 
+    def setup(self, input = "", message = "New entry"):
+        super().setup(input, message)
 
 class DummyPage:
     def __init__(self):

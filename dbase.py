@@ -3,6 +3,7 @@
 import os
 
 FNAME = "passwd.txt"
+FRESHNAME = "fresh.txt"
 
 class Database:
     def count(self, input):
@@ -56,25 +57,29 @@ class Database:
         return None
 
     def put(self, new_name, new_password):
-        with open(FNAME) as f:
-            with open(FNAME + "~", "w") as out:
-                written = False
-                while True:
-                    line = f.readline()
-                    if not line:
-                        break
-                    name, passwd = line.split("\t", 1)
-                    if name < new_name:
-                        out.write(line)
-                    elif name >= new_name:
-                        if not written:
-                            out.write(f"{new_name}\t{new_password}\n")
-                            written = True
-                        out.write(line)
-                if not written:
-                    out.write(f"{new_name}\t{new_password}\n")
-
-        os.rename(FNAME + "~", FNAME)
+        new_line = f"{new_name}\t{new_password}\n"
+        try:
+            with open(FRESHNAME) as f:
+                with open(FRESHNAME + "~", "w") as out:
+                    written = False
+                    while True:
+                        line = f.readline()
+                        if not line:
+                            break
+                        name, passwd = line.split("\t", 1)
+                        if name < new_name:
+                            out.write(line)
+                        elif name >= new_name:
+                            if not written:
+                                out.write(new_line)
+                                written = True
+                            out.write(line)
+                    if not written:
+                        out.write(new_line)
+            os.rename(FRESHNAME + "~", FRESHNAME)
+        except OSError:
+            with open(FRESHNAME, "w") as out:
+                out.write(new_line)
 
     def favs(self, offs=0, count=-1):
         print("favs", offs, count)
