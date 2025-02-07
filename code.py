@@ -291,10 +291,11 @@ class FilterPage(TextEntry):
     def __init__(self):
         # Next screen will be 'list' if a filter term is given, else 'fav'
         super().__init__("", 10, lambda input: 'list' if input != "" else 'fav')
-        self.last_input = None
 
-    def setup(self, input = "", message = "Filter entries"):
-        super().setup(input, message, keys=NAME_KEYS)
+    def setup(self, input = ""):
+        super().setup(input, keys=NAME_KEYS)
+        # to force update() with count
+        self.last_input = None
 
     def count(self):
         global count
@@ -426,7 +427,7 @@ class DetailPage:
                 # New entry
                 self.password = self.gen()
                 enc = xxtea.encryptToBase64(self.password, pv_password)
-                db.put(self.input, enc)
+                db.put(self.entry, enc)
             else:
                 self.password = xxtea.decryptFromBase64(password, pv_password)
             print("Passwd", self.password)

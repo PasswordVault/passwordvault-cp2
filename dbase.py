@@ -28,7 +28,7 @@ class Database:
                 line = f.readline()
                 if not line:
                     break
-                name, passwd = line.split("\t", 1)
+                name = line.split("\t", 1)[0]
                 if name.startswith(input):
                     batch_started = True
                 else:
@@ -46,14 +46,15 @@ class Database:
         return result
 
     def get(self, input):
-        with open(FNAME) as f:
-            while True:
-                line = f.readline()
-                if not line:
-                    break
-                name, passwd = line.split("\t", 1)
-                if name == input:
-                    return passwd.rstrip()
+        for fname in [FRESHNAME, FNAME]:
+            with open(fname) as f:
+                while True:
+                    line = f.readline()
+                    if not line:
+                        break
+                    name, passwd = line.split("\t", 1)
+                    if name == input:
+                        return passwd.rstrip()
         return None
 
     def put(self, new_name, new_password):
