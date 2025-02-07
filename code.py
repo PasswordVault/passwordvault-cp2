@@ -217,9 +217,19 @@ class TextEntry:
             if self.mode == 'v':         # UP
                 if self.cursor_y > 0:
                     self.cursor_y -= 1
+                else:
+                    self.cursor_y = self.key_lines - 1
+                    new_i = self.cursor_y * self.width + self.cursor_x
+                    if new_i > len(self.keys) - 1:
+                        self.cursor_y -= 1
             else:                        # LEFT
                 if self.cursor_x > 0:
                     self.cursor_x -= 1
+                else:
+                    self.cursor_x = self.width - 1
+                    new_i = self.cursor_y * self.width + self.cursor_x
+                    if new_i > len(self.keys) - 1
+                        self.cursor_x = (len(self.keys) - 1) % self.width
 
         elif keys[1]: # RIGHT or DOWN
             if self.mode == 'v':         # DOWN
