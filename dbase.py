@@ -1,5 +1,7 @@
 '''
 '''
+import os
+
 FNAME = "passwd.txt"
 
 class Database:
@@ -51,6 +53,28 @@ class Database:
                 name, passwd = line.split("\t", 1)
                 if name == input:
                     return passwd.rstrip()
+        return None
+
+    def put(self, new_name, new_password):
+        with open(FNAME) as f:
+            with open(FNAME + "~", "w") as out:
+                written = False
+                while True:
+                    line = f.readline()
+                    if not line:
+                        break
+                    name, passwd = line.split("\t", 1)
+                    if name < new_name:
+                        out.write(line)
+                    elif name >= new_name:
+                        if not written:
+                            out.write(f"{new_name}\t{new_password}\n")
+                            written = True
+                        out.write(line)
+                if not written:
+                    out.write(f"{new_name}\t{new_password}\n")
+
+        os.rename(FNAME + "~", FNAME)
 
     def favs(self, offs=0, count=-1):
         print("favs", offs, count)

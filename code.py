@@ -16,10 +16,12 @@ import gc
 import math
 import os
 import usb_hid
+import random
 import time
 import xxtea
 
-PV_VERSION = "1.0"
+PV_VERSION = "2.0"
+NAME_KEYS = "abcdefghijklmnopqrstuvwxyz0123<456789/->"
 
 app = None
 screen = None
@@ -233,13 +235,7 @@ class TextEntry:
                 else:
                     self.cursor_x = 0
 
-        elif keys[0]: # HOR or VRT
-            if self.mode == 'v':
-                self.mode = 'h'          # HORIZONTAL
-            else:
-                self.mode = 'v'          # VERTICAL
-
-        elif keys[3]: # SEL or NXT
+        elif keys[3]:   # SEL or NXT
             if self.mode == 'h':         # SELECT
                 i = self.cursor_y * self.width + self.cursor_x
                 key = self.keys[i]
@@ -255,6 +251,12 @@ class TextEntry:
                 if self.next_page:
                     next_page = self.next_page(self.input) if callable(self.next_page) else self.next_page
                     app.goto(next_page, input=self.input)
+
+        elif keys[0]: # HOR or VRT
+            if self.mode == 'v':
+                self.mode = 'h'          # HORIZONTAL
+            else:
+                self.mode = 'v'          # VERTICAL
 
         else:
             self.dirty = False
@@ -292,7 +294,7 @@ class FilterPage(TextEntry):
         self.last_input = None
 
     def setup(self, input = ""):
-        super().setup(input, keys="abcdefghijklmnopqrstuvwxyz0123<456789/->")
+        super().setup(input, keys=NAME_KEYS)
 
     def count(self):
         global count
@@ -321,7 +323,7 @@ class ListPage:
             self.next_page = 'list'
         else:
             self.prompt = '#'
-            self.next_page = 'filter'
+            self.next_page = 'gen'
 
         self.scroll_top = 0
         self.prev_scroll_top = -1
@@ -396,15 +398,37 @@ class FavPage(ListPage):
 
 class DetailPage:
 
-    def setup(self, entry, input):
+    CHARS = {
+        'a': "abcdefghijklmnopqrstuvwxyz",
+        'A': "",
+        '9': "0123456789",
+        ';': "!'$%&/()=+*#-_.:,;",
+    }
+    def __init__(self):
+        self.CHARS["A"] = self.CHARS["A"].upper()
+
+    def gen(self):
+        passwd = ""
+        for i in range(12):
+            sel = random.choice(self.CHARS.keys())
+            passwd += random.choice(self.CHARS[sel])
+        return passwd
+
+    def setup(self, input, entry = None):
         self.dirty = True
-        self.entry = entry
         self.input = input
+        self.entry = entry if entry else input
         self.color = screen.lcd.WHITE
 
         try:
             password = db.get(entry)
-            self.password = xxtea.decryptFromBase64(password, pv_password)
+            if password == None:
+                # New entry
+                self.password = self.gen()
+                enc = xxtea.encryptToBase64(self.password, pv_password)
+                db.put(self.input, enc)
+            else:
+                self.password = xxtea.decryptFromBase64(password, pv_password)
             print("Passwd", self.password)
             self.type_and_fav()
         except ValueError as e:
@@ -440,6 +464,11 @@ class DetailPage:
             app.goto('fav', input = self.input)
 
 
+class GenPage(TextEntry):
+    def __init__(self):
+        super().__init__(NAME_KEYS, 10, lambda input: 'detail' if input != "" else 'filter', '!')
+
+
 class DummyPage:
     def __init__(self):
         self.dirty = True
@@ -468,6 +497,7 @@ app = App({
     'fav': FavPage(),
     'list': ListPage(),
     'detail': DetailPage(),
+    'gen': GenPage(),
 })
 
 pv_password = os.getenv("PV_PASSWORD")
