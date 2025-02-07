@@ -385,7 +385,8 @@ class ListPage:
                 input=self.input)
 
         elif keys[3]:              # NEXT
-            app.goto(self.next_page, input=self.input)
+            input = self.saved_input if self.saved_input else self.input
+            app.goto(self.next_page, input=input)
 
         else:
             self.dirty = False
@@ -395,7 +396,8 @@ class ListPage:
 class FavPage(ListPage):
 
     def setup(self, input):
-        super().setup(input, favs = True)
+        self.saved_input = input
+        super().setup("", favs = True)
 
 
 class DetailPage:
