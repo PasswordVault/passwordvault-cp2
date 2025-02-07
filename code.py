@@ -154,6 +154,7 @@ class TextEntry:
         self.width = width
         self.prompt = prompt
         self.next_page = next_page
+        self.saved_input = None
         self.calc_key_lines()
 
     def setup(self, input = "", message = "", **kwargs):
@@ -251,7 +252,8 @@ class TextEntry:
             else:                        # NEXT
                 if self.next_page:
                     next_page = self.next_page(self.input) if callable(self.next_page) else self.next_page
-                    app.goto(next_page, input=self.input)
+                    input = self.saved_input if self.saved_input else self.input
+                    app.goto(next_page, input=input)
 
         elif keys[0]: # HOR or VRT
             if self.mode == 'v':
@@ -471,7 +473,8 @@ class GenPage(TextEntry):
         super().__init__(NAME_KEYS, 10, lambda input: 'detail' if input != "" else 'filter', '!')
 
     def setup(self, input = "", message = "New entry"):
-        super().setup(input, message)
+        self.saved_input = input
+        super().setup("", message)
 
 
 #-------------------------------------------------------------------
