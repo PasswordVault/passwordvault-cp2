@@ -25,6 +25,7 @@ BL = board.GP13
 
 class Display(ST7735R):
     BLACK  = 0x000000
+    GRAY   = 0x808080
     WHITE  = 0xFFFFFF
     GBLUE  = 0x00FFFF
     GREEN  = 0x00FF00
@@ -62,8 +63,8 @@ class Display(ST7735R):
         splash = displayio.Group()
         self.root_group = splash
 
-    def text(self, txt, x,y, color):
-        lbl = bitmap_label.Label(terminalio.FONT, text=txt, color=color, x=x, y=y, anchor_point=(0,0), save_text=False)
+    def text(self, txt, x,y, color, background_color):
+        lbl = bitmap_label.Label(terminalio.FONT, text=txt, color=color, background_color=background_color, x=x, y=y, anchor_point=(0,0), save_text=False)
         self.root_group.append(lbl)
 
     def hline(self, x,y, w, color):

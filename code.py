@@ -65,8 +65,8 @@ class Screen():
     def fill_rect(self, x,y, w,h, color):
         return self.lcd.fill_rect(x,y, w,h, color)
 
-    def text(self, txt, x,y, color):
-        return self.lcd.text(txt, x,y, color)
+    def text(self, txt, x,y, color, background_color = None):
+        return self.lcd.text(txt, x,y, color, background_color)
 
     def hline(self, x,y, w, color):
         return self.lcd.hline(x,y, w, color)
@@ -173,8 +173,8 @@ class TextEntry:
             'h': ['SEL', 'LFT', 'RGT', 'VER'],
         }
         for i,y in enumerate([1, 39, 75, screen.height - 15]):
-            screen.fill_rect(screen.width - 24,y, 24,10, screen.lcd.YELLOW)
-            screen.text(labels[self.mode][i], screen.width - 22, y+5, screen.lcd.BLACK)
+            #screen.fill_rect(screen.width - 24,y, 24,10, screen.lcd.YELLOW)
+            screen.text(labels[self.mode][i], screen.width - 22, y+5, screen.lcd.WHITE, background_color=screen.lcd.GRAY)
 
     def draw(self):
         screen.clear()
@@ -185,10 +185,11 @@ class TextEntry:
             c = self.keys[i]
             pos_x = round(self.x_offs + x * self.CELL_WIDTH)
             pos_y = round(self.Y_OFFSET + y * self.CELL_HEIGHT)
+            bgcolor = screen.lcd.GRAY if c in ['<', '>'] else screen.lcd.BLACK
             if x == self.cursor_x and y == self.cursor_y:
-                screen.text(c, pos_x, pos_y, screen.lcd.GBLUE)
+                screen.text(c, pos_x, pos_y, screen.lcd.GBLUE, background_color=bgcolor)
             else:
-                screen.text(c, pos_x, pos_y, screen.lcd.WHITE)
+                screen.text(c, pos_x, pos_y, screen.lcd.WHITE, background_color=bgcolor)
             x += 1
             if x >= self.width:
                 x = 0
@@ -203,7 +204,7 @@ class TextEntry:
 
     def about(self):
         top = 88
-        screen.text("passwordvault.de", 0,top+8, screen.lcd.GREEN)
+        screen.text("passwordvault.de", 0,top+8, screen.lcd.WHITE)
         screen.text(PV_VERSION, 40,top+18, screen.lcd.WHITE)
         #print(f"DISPLAY {screen.width}x{screen.height}")
 
@@ -346,8 +347,8 @@ class ListPage:
     def show_key_labels(self):
         labels = ['NXT', ' UP', 'DWN', 'SEL']
         for i,y in enumerate([1, 39, 75, screen.height - 15]):
-            screen.fill_rect(screen.width - 24,y, 24,10, screen.lcd.YELLOW)
-            screen.text(labels[i], screen.width - 22, y+5, screen.lcd.BLACK)
+            #screen.fill_rect(screen.width - 24,y, 24,10, screen.lcd.YELLOW)
+            screen.text(labels[i], screen.width - 22, y+5, screen.lcd.WHITE, background_color=screen.lcd.GRAY)
 
     def draw(self):
         screen.clear()
@@ -452,8 +453,8 @@ class DetailPage:
     def show_key_labels(self):
         y = 1
         label = 'NXT'
-        screen.fill_rect(screen.width - 24,y, 24,10, screen.lcd.YELLOW)
-        screen.text(label, screen.width - 22, y+5, screen.lcd.BLACK)
+        #screen.fill_rect(screen.width - 24,y, 24,10, screen.lcd.YELLOW)
+        screen.text(label, screen.width - 22, y+5, screen.lcd.WHITE, background_color=screen.lcd.GRAY)
 
     def draw(self):
         screen.show_header(":", self.entry)
@@ -472,28 +473,11 @@ class GenPage(TextEntry):
     def setup(self, input = "", message = "New entry"):
         super().setup(input, message)
 
-class DummyPage:
-    def __init__(self):
-        self.dirty = True
-
-    def setup(self):
-        pass
-
-    def draw(self):
-        screen.example()
-
-    def on_key_pressed(self, changed_keys):
-        if changed_keys[3]:
-            kbd = Keyboard(usb_hid.devices)
-            layout = KeyboardLayout(kbd)
-            layout.write("qwertzäöüß!\"§$%&/()=")
-
 
 #-------------------------------------------------------------------
 
 screen = Screen()
 app = App({
-    'dummy': DummyPage(),
     'lock': LockPage(),
     'unlock': UnlockPage(),
     'filter': FilterPage(),
