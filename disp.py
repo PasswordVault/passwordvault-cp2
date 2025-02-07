@@ -33,14 +33,15 @@ class Display(ST7735R):
     def __init__(self):
         displayio.release_displays()
         spi = busio.SPI(SCK, MOSI)
-        bl = digitalio.DigitalInOut(BL)
-        bl.direction = digitalio.Direction.OUTPUT
-        bl.value = True
+        self.bl = digitalio.DigitalInOut(BL)
+        self.bl.direction = digitalio.Direction.OUTPUT
+        self.bl.value = False
         display_bus = fourwire.FourWire(spi, command=DC, chip_select=CS, reset=RESET)
         super().__init__(display_bus,
                           width=128, height=128,
                           colstart=2, rowstart=3,
                           rotation=270)
+        self.bl.value = True
 
     def config_buttons(self):
         self.pins = [
@@ -58,6 +59,8 @@ class Display(ST7735R):
         return self.pins[i].value
 
     def clear(self):
+        #print("clear")
+        #self.bl.value = False
         self.root_group = None
         gc.collect()
         splash = displayio.Group()
@@ -75,45 +78,8 @@ class Display(ST7735R):
         r = rect.Rect(x=x, y=y, width=w, height=h, fill=color, outline=color)
         self.root_group.append(r)
 
-    def example(self):
-        # Make the display context
-        splash = displayio.Group()
-        self.root_group = splash
-
-        color_bitmap = displayio.Bitmap(128, 128, 1)
-        color_palette = displayio.Palette(1)
-        color_palette[0] = 0x00FF00  # Bright Green
-
-        bg_sprite = displayio.TileGrid(color_bitmap, pixel_shader=color_palette, x=0, y=0)
-        splash.append(bg_sprite)
-
-        # Draw a smaller inner rectangle
-        inner1_bitmap = displayio.Bitmap(126, 126, 1)
-        inner1_palette = displayio.Palette(1)
-        inner1_palette[0] = 0xFF0000  # Red
-        inner1_sprite = displayio.TileGrid(inner1_bitmap, pixel_shader=inner1_palette, x=1, y=1)
-        splash.append(inner1_sprite)
-
-        # Draw a smaller inner rectangle
-        inner2_bitmap = displayio.Bitmap(108, 108, 1)
-        inner2_palette = displayio.Palette(1)
-        inner2_palette[0] = 0xAA0088  # Purple
-        inner2_sprite = displayio.TileGrid(inner2_bitmap, pixel_shader=inner2_palette, x=10, y=10)
-        splash.append(inner2_sprite)
-
-        # Draw a label
-        text = "Hallo Welt!"
-        text_area = label.Label(terminalio.FONT, text=text, color=0xFFFF00, x=30, y=64)
-        splash.append(text_area)
-        #text = "Hallo Welt. Ich bin ein sehr langer Text mit Ümläuten ;)"
-        #label = ScrollingLabel(
-        #    terminalio.FONT, text=text, max_characters=18, animate_time=0.3
-        #)
-        #label.x = 10
-        #label.y = 64
-        #splash.append(label)
-
-        #while True:
-        #    label.update()
-
+    def show(self):
+        #print("show")
+        #self.bl.value = True
+        pass
 

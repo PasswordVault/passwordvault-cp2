@@ -78,8 +78,7 @@ class Screen():
         self.hline(0,10, self.width-24, self.lcd.GBLUE)
 
     def show(self):
-        pass
-        #return self.lcd.show()
+        return self.lcd.show()
 
 
 class App:
@@ -112,8 +111,7 @@ class App:
 
     def goto(self, page_name, **kwargs):
         gc.collect()
-        print(f"goto {page_name} mem({gc.mem_free()})", kwargs)
-        screen.clear()
+        print(f"goto {page_name} mem({gc.mem_free()})", kwargs) # DEBUG
         self.page = self.pages[page_name]
         self.page.setup(**kwargs)
 
@@ -130,6 +128,7 @@ class App:
                 self.page.update()
 
             if self.page.dirty:
+                screen.clear()
                 self.page.draw()
                 screen.show()
                 self.page.dirty = False
@@ -178,7 +177,6 @@ class TextEntry:
             screen.text(labels[self.mode][i], screen.width - 22, y+5, screen.lcd.WHITE, background_color=screen.lcd.GRAY)
 
     def draw(self):
-        screen.clear()
         x = y = 0
         screen.show_header(self.prompt, self.input)
 
@@ -207,7 +205,7 @@ class TextEntry:
         top = 88
         screen.text("passwordvault.de", 0,top+8, screen.lcd.WHITE)
         screen.text(PV_VERSION, 40,top+18, screen.lcd.WHITE)
-        #print(f"DISPLAY {screen.width}x{screen.height}")
+        #print(f"DISPLAY {screen.width}x{screen.height}") # DEBUG
 
     def on_key_pressed(self, keys):
         '''
@@ -277,6 +275,7 @@ class LockPage(TextEntry):
 class UnlockPage:
 
     def setup(self, input):
+        print("unlock", input, pv_password)
         if input == pv_password:
             app.goto('filter')
         else:
@@ -353,7 +352,6 @@ class ListPage:
             screen.text(labels[i], screen.width - 22, y+5, screen.lcd.WHITE, background_color=screen.lcd.GRAY)
 
     def draw(self):
-        screen.clear()
         screen.show_header(self.prompt, self.input)
 
         i = 0
@@ -391,7 +389,7 @@ class ListPage:
 
         else:
             self.dirty = False
-        print("curr_screen_line", self.curr_screen_line, "count", count, "scroll_top", self.scroll_top, "mem", gc.mem_free())
+        print("curr_screen_line", self.curr_screen_line, "count", count, "scroll_top", self.scroll_top, "mem", gc.mem_free()) # DEBUG
 
 
 class FavPage(ListPage):
@@ -441,7 +439,7 @@ class DetailPage:
             self.color = screen.lcd.RED
 
     def type_and_fav(self):
-        print("Type")
+        print("Type") # DEBUG
         kbd = Keyboard(usb_hid.devices)
         layout = KeyboardLayout(kbd)
         layout.write(self.password)
@@ -449,7 +447,7 @@ class DetailPage:
         print("Done.")
 
     def write_fav(self):
-        print("Writing fav...")
+        print("Writing fav...") # DEBUG
         db.add_fav(self.entry)
 
     def show_key_labels(self):
