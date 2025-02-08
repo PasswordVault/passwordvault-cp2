@@ -291,7 +291,7 @@ class UnlockPage:
         print("unlock", input) # DEBUG
         pv_password = input
 
-        enc_input = xxtea.encryptToBase64(input, input):
+        enc_input = xxtea.encryptToBase64(input, input)
         enc_password = os.getenv("PV_PASSWORD")
 
         if enc_input == enc_password:
