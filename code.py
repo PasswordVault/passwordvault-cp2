@@ -20,7 +20,7 @@ import random
 import time
 import xxtea
 
-PV_VERSION = "2.0"
+PV_VERSION = "2.1"
 NAME_KEYS = "abcdefghijklmnopqrstuvwxyz0123<456789/->"
 
 app = None
@@ -82,6 +82,7 @@ class Screen():
 
 
 class App:
+
     def __init__(self, pages):
         self.pages = pages
         self.buttons_count = screen.config_buttons()
@@ -137,8 +138,8 @@ class App:
         screen.clear()
 
 
-
 class TextEntry:
+
     CELL_WIDTH = 10
     Y_OFFSET = 18
     CELL_HEIGHT = 12
@@ -285,14 +286,22 @@ class LockPage(TextEntry):
 class UnlockPage:
 
     def setup(self, input):
-        print("unlock", input, pv_password)
-        if input == pv_password:
+        global pv_password
+
+        print("unlock", input) # DEBUG
+        pv_password = input
+
+        enc_input = xxtea,encryptToBase64(input, input):
+        enc_password = os.getenv("PV_PASSWORD")
+
+        if enc_input == enc_password:
             app.goto('filter')
         else:
             app.goto('lock', message="Try again")
 
 
 class FilterPage(TextEntry):
+
     '''
     Show a keyboard to filter entries.
     Press KEY3 to flip through screens with the filter applied:
@@ -503,7 +512,6 @@ app = App({
     'gen': GenPage(),
 })
 
-pv_password = os.getenv("PV_PASSWORD")
 db = dbase.Database()
 app.goto('lock')
 app.run()
