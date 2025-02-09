@@ -1,11 +1,13 @@
 import os
 import sys
+
+sys.path.append('.')
 import xxtea
 
-key = '123'
+passkey = None
 
 def print_entries():
-    with open('passwd.raw') as inp:
+    with open('passwd.tsv') as inp:
         with open('passwd.txt', 'w') as out:
             print("Reading...", file=sys.stderr)
             while True:
@@ -19,5 +21,6 @@ def print_entries():
     print("Done.", file=sys.stderr)
 
 if __name__ == '__main__':
+    passkey = input("Gib deinen Schlüssel ein: ")
     print_entries()
 

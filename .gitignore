@@ -8,4 +8,5 @@ doc/
 simulation/
 .env
 *.uf2
+settings.toml
 

@@ -1,6 +1,6 @@
 #
-passwd.txt: passwd.raw
-	python3 mkdb.py
+passwd.txt::	
+	python3 bin/passwords.py
 
 clean::
 	rm -f passwd.txt
