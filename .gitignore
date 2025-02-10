@@ -6,6 +6,7 @@ unused/
 tmp/
 doc/
 simulation/
+data/
 .env
 *.uf2
 settings.toml

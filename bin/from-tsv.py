@@ -16,7 +16,7 @@ def print_entries():
                     break
                 name, passwd = l.split('\t', 1)
                 passwd = passwd.rstrip()
-                enc = xxtea.encryptToBase64(passwd, key)
+                enc = xxtea.encryptToBase64(passwd, passkey)
                 out.write(f"{name}\t{enc}\n")
     print("Done.", file=sys.stderr)
 
