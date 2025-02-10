@@ -22,5 +22,8 @@ def print_entries():
 
 if __name__ == '__main__':
     passkey = input("Gib deinen Schlüssel ein: ")
+    with open("settings.toml", "w") as settings:
+        enc = xxtea.encryptToBase64(passkey, passkey)
+        settings.write(f'PV_PASSWORD = "{enc}"\n')
     print_entries()
 

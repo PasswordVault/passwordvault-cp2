@@ -34,4 +34,7 @@ if __name__ == '__main__':
         print(f"Aufruf: {sys.argv[0]} <CSV-Datei>")
         sys.exit(-1)
     passkey = input("Gib deinen Schlüssel ein: ")
+    with open("settings.toml", "w") as settings:
+        enc = xxtea.encryptToBase64(passkey, passkey)
+        settings.write(f'PV_PASSWORD = "{enc}"\n')
     convert(sys.argv[1])
