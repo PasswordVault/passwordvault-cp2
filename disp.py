@@ -42,7 +42,7 @@ class Display(ST7735R):
                           colstart=2, rowstart=3,
                           rotation=270)
         self.bl.value = True
-
+    
     def config_buttons(self):
         self.pins = [
             digitalio.DigitalInOut(board.GP15),
