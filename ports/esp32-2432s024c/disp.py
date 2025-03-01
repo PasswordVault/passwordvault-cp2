@@ -77,6 +77,11 @@ class Display():
         board.DISPLAY.root_group.append(r)
         return r
 
+    def rect(self, x,y, w,h, color):
+        r = rect.Rect(x=x, y=y, width=w, height=h, outline=color)
+        board.DISPLAY.root_group.append(r)
+        return r
+
     def pop(self):
         board.DISPLAY.root_group.pop()
 

@@ -78,6 +78,9 @@ class Screen():
     def fill_rect(self, x,y, w,h, color):
         return self.lcd.fill_rect(x,y, w,h, color)
 
+    def rect(self, x,y, w,h, color):
+        return self.lcd.rect(x,y, w,h, color)
+
     def text(self, txt, x,y, color, background_color = None):
         return self.lcd.text(txt, x,y, color, background_color)
 
@@ -139,7 +142,7 @@ class App:
                     x = touch["x"]
                     y = touch["y"]
                     event = screen.events[touch["event_id"]]
-                    #print(f"touch_id: {touch_id}, x: {x}, y: {y}, event: {event}")
+                    print(f"x: {x}, y: {y}, {event}")
                     if getattr(self.page, "on_touched", None):
                         self.page.on_touched(event, y, screen.height - x)
 
@@ -163,15 +166,17 @@ class App:
         screen.clear()
 
 class Button:
-    def __init__(self, name, x, y, w, h):
+    def __init__(self, name, x, y, w, h, **kwargs):
         self.name = name
         self.x = x
         self.y = y
         self.w = w
         self.h = h
+        self.padding = kwargs['padding'] if 'padding' in kwargs else 10
+        #r = screen.rect(x-self.padding, y-h-self.padding, 2*w+self.padding, 2*h+self.padding, screen.lcd.GREEN)
 
     def touched(self, x, y):
-        return self.x - 1 <= x and x <= self.x + self.w + 1 and self.y - 1 <= y and y <= self.y + self.h + 1
+        return self.x - self.padding <= x and x <= self.x + 2 * self.w + self.padding and self.y - self.h - self.padding <= y and y <= self.y + self.h + self.padding
 
 
 class TextEntry:
@@ -193,7 +198,7 @@ class TextEntry:
         self.saved_input = None
         self.calc_key_lines()
         self.buttons = []
-        self.last_touch = None
+        #self.last_touch = None
 
     def setup(self, input = "", message = "", **kwargs):
         self.input = input
@@ -211,7 +216,7 @@ class TextEntry:
             'v': ['NXT', ' UP', 'DWN', 'HOR'],
             'h': ['SEL', 'LFT', 'RGT', 'VER'],
         }
-        for i,y in enumerate([9, 47, 83, screen.height - 15]):
+        for i,y in enumerate([19, 47, 83, screen.height - 15]):
             #screen.fill_rect(screen.width - 24,y, 24,10, screen.lcd.YELLOW)
             name = labels[self.mode][i]
             label = screen.text(name, screen.width - 44, y+5, screen.lcd.WHITE, background_color=screen.lcd.GRAY)
@@ -258,17 +263,18 @@ class TextEntry:
         self.dirty = True
         for b in self.buttons:
             #print(x, y, "--", b.x,b.x+b.w, b.y,b.y+b.h)
-            '''
-            r = screen.fill_rect(x-2,y-2,4,4, screen.lcd.WHITE)
+            #'''
+            r = screen.fill_rect(x-2,y-2,4,4, screen.lcd.GREEN)
             time.sleep(0.01)
             screen.pop()
-            '''
+            #'''
             touch = f"{event}:{b.name}"
-            touched = b.touched(x, y)
+            #touched = b.touched(x, y)
             #print(b.name, touched)
-            if touch != self.last_touch and touched:
-                print(f"{event} {b.name}")
-                self.last_touch = touch
+            #if touch != self.last_touch and touched:
+            if b.touched(x, y):
+                print(touch)
+                #self.last_touch = touch
                 
                 if not event in ["PRESS", "TOUCHING"]:
                     self.dirty = False
@@ -422,7 +428,7 @@ class ListPage:
     def __init__(self):
         self.saved_input = None
         self.buttons = []
-        self.last_touch = None
+        #self.last_touch = None
 
     def setup(self, input, favs = False):
         self.dirty = True
@@ -440,6 +446,7 @@ class ListPage:
         self.prev_scroll_top = -1
         self.curr_screen_line = 0
         self.entries = []
+        self.eof = False
 
     def update(self):
         if self.prev_scroll_top == self.scroll_top:
@@ -447,16 +454,16 @@ class ListPage:
         self.prev_scroll_top = self.scroll_top
 
         if self.favs:
-            self.entries = db.favs(self.scroll_top, self.SCREEN_LINES)
+            self.entries, self.eof = db.favs(self.scroll_top, self.SCREEN_LINES)
         else:
-            self.entries = db.filter(self.input, self.scroll_top, self.SCREEN_LINES)
+            self.entries, self.eof = db.filter(self.input, self.scroll_top, self.SCREEN_LINES)
         screen.clear()
         self.dirty = True
 
     def show_key_labels(self):
         if TOUCH:
             labels = ['NXT', 'PUP', 'PDN']
-            for i,y in enumerate([9, 47, 83]):
+            for i,y in enumerate([19, 71, 125]):
                 name = labels[i]
                 label = screen.text(name, screen.width - 44, y+5, screen.lcd.WHITE, background_color=screen.lcd.GRAY)
                 self.buttons.append(Button(name, screen.width - 44, y+5, label.width, label.height))
@@ -479,7 +486,7 @@ class ListPage:
                 screen.text(entry, pos_x,pos_y, screen.lcd.GBLUE)
             else:
                 label = screen.text(entry, pos_x,pos_y, screen.lcd.WHITE)
-                self.buttons.append(Button(entry, pos_x, pos_y, screen.width - 50, label.height))
+                self.buttons.append(Button(entry, pos_x, pos_y, screen.width // 2 - 50, label.height, padding=0))
             i += 1
         self.show_key_labels()
 
@@ -487,15 +494,16 @@ class ListPage:
         self.dirty = True
         for b in self.buttons:
             #print(x, y, "--", b.x,b.x+b.w, b.y,b.y+b.h)
-            '''
-            r = screen.fill_rect(x-2,y-2,4,4, screen.lcd.WHITE)
+            #'''
+            r = screen.fill_rect(x-2,y-2,4,4, screen.lcd.GREEN)
             time.sleep(0.01)
             screen.pop()
-            '''
+            #'''
             touch = f"{event}:{b.name}"
-            if touch != self.last_touch and b.touched(x, y):
-                print(f"{event} {b.name}")
-                self.last_touch = touch
+            #if touch != self.last_touch and b.touched(x, y):
+            if b.touched(x, y):
+                print(touch)
+                #self.last_touch = touch
                 
                 if not event in ["PRESS", "TOUCHING"]:
                     self.dirty = False
@@ -503,6 +511,13 @@ class ListPage:
                 if b.name == 'NXT':
                     input = self.saved_input if self.saved_input else self.input
                     app.goto(self.next_page, input=input)
+                elif b.name == 'PDN':
+                    if not self.eof:
+                        self.scroll_top += self.SCREEN_LINES
+                elif b.name == 'PUP':
+                    self.scroll_top -= self.SCREEN_LINES
+                    if self.scroll_top < 0:
+                        self.scroll_top = 0
                 else:
                     app.goto('detail',
                         entry=b.name,
@@ -556,7 +571,7 @@ class DetailPage:
         self.CHARS["A"] = list(self.CHARS["a"].upper())
         self.CHARS["a"] = list(self.CHARS["a"])
         self.buttons = []
-        self.last_touch = None
+        #self.last_touch = None
 
     def gen(self):
         passwd = ""
@@ -602,7 +617,7 @@ class DetailPage:
         db.add_fav(self.entry)
 
     def show_key_labels(self):
-        y = 9
+        y = 19
         name = 'NXT'
         label = screen.text(name, screen.width - 44, y+5, screen.lcd.WHITE, background_color=screen.lcd.GRAY)
         self.buttons.append(Button(name, screen.width - 44, y+5, label.width, label.height))
@@ -622,11 +637,12 @@ class DetailPage:
             time.sleep(0.01)
             screen.pop()
             touch = f"{event}:{b.name}"
-            touched = b.touched(x, y)
-            print(b.name, touched)
-            if touch != self.last_touch and touched:
+            #touched = b.touched(x, y)
+            #print(b.name, touched)
+            #if touch != self.last_touch and touched:
+            if b.touched(x, y):
                 print(f"{event} {b.name}")
-                self.last_touch = touch
+                #self.last_touch = touch
                 
                 if not event in ["PRESS", "TOUCHING"]:
                     self.dirty = False
