@@ -170,7 +170,7 @@ class App:
                     self.page.draw()
                 screen.show()
                 self.page.dirty = False
-            time.sleep(0.5)
+            time.sleep(0.2)
         
         screen.clear()
         
@@ -178,17 +178,20 @@ class App:
 class Button:
     def __init__(self, name, x, y, w, h, **kwargs):
         self.name = name
-        self.x = x
-        self.y = y
-        self.w = w
-        self.h = h
-        self.padding = kwargs['padding'] if 'padding' in kwargs else 10
-        #r = screen.rect(x-self.padding, y-h-self.padding, 2*w+self.padding, 2*h+self.padding, screen.lcd.GREEN)
+        padding = kwargs['padding'] if 'padding' in kwargs else 8
+
+        self.bb_x = x - padding
+        self.bb_w = 2 * (w + padding)
+        self.bb_y = y - 2 * padding + 2
+        self.bb_h = h + 2 * padding
+        
+        #r = screen.rect(self.bb_x, self.bb_y, self.bb_w, self.bb_h, screen.lcd.GREEN)
 
     def touched(self, x, y):
-        within = self.x - self.padding <= x and x <= self.x + 2 * self.w + self.padding and self.y - self.h - self.padding <= y and y <= self.y + self.h + self.padding
+        
+        within = self.bb_x <= x and x <= self.bb_x + self.bb_w and self.bb_y <= y and y <= self.bb_y + self.bb_h
         if within:
-            r = screen.fill_rect(self.x, self.y - self.h, 2 * self.w, self.h, screen.lcd.GREEN)
+            r = screen.fill_rect(self.bb_x, self.bb_y, self.bb_w, self.bb_h, screen.lcd.GREEN)
             time.sleep(0.02)
             screen.pop()
         return within
@@ -215,11 +218,12 @@ class TextEntry:
         self.calc_key_lines()
         self.buttons = []
         #self.last_touch = None
+        self.message_label = None
 
     def setup(self, input = "", message = "", **kwargs):
         self.input = input
         self.message = message
-        self.x_offs = screen.width / 2 - self.CELL_WIDTH * self.width / 2 -12
+        self.x_offs = screen.width / 2 - self.CELL_WIDTH * self.width / 2 -16
         self.cursor_x = self.cursor_y = 0
         self.mode = 'v' # vertical or horizontal
         self.drawn = False
@@ -266,7 +270,7 @@ class TextEntry:
         line_y = 44 + self.key_lines * self.CELL_HEIGHT
         screen.hline(0, line_y, screen.width, screen.lcd.GBLUE)
         screen.fill_rect(0,164, screen.width,8, screen.lcd.BLACK)
-        screen.text(self.message, 4,164, screen.lcd.GREEN)
+        self.message_label = screen.text(self.message, 4,164, screen.lcd.GREEN)
         self.about()
         self.show_key_labels()
         self.drawn = True
@@ -276,6 +280,7 @@ class TextEntry:
             screen.clear()
             return self.draw()
         screen.show_header(self.prompt, self.input)
+        self.message_label.text = self.message
 
     def about(self):
         top = 176
@@ -287,11 +292,11 @@ class TextEntry:
         self.dirty = True
         for b in self.buttons:
             #print(x, y, "--", b.x,b.x+b.w, b.y,b.y+b.h)
-            '''
+            #'''
             r = screen.fill_rect(x-2,y-2,4,4, screen.lcd.GREEN)
             time.sleep(0.01)
             screen.pop()
-            '''
+            #'''
             touch = f"{event}:{b.name}"
             #touched = b.touched(x, y)
             #print(b.name, touched)
@@ -510,7 +515,7 @@ class ListPage:
                 screen.text(entry, pos_x,pos_y, screen.lcd.GBLUE)
             else:
                 label = screen.text(entry, pos_x,pos_y, screen.lcd.WHITE)
-                self.buttons.append(Button(entry, pos_x, pos_y, screen.width // 2 - 50, label.height, padding=0))
+                self.buttons.append(Button(entry, pos_x, pos_y - label.height // 2 - 4, screen.width // 2 - 50, label.height * 2 - 4, padding=0))
             i += 1
         self.show_key_labels()
 
@@ -521,11 +526,11 @@ class ListPage:
         self.dirty = True
         for b in self.buttons:
             #print(x, y, "--", b.x,b.x+b.w, b.y,b.y+b.h)
-            '''
+            #'''
             r = screen.fill_rect(x-2,y-2,4,4, screen.lcd.GREEN)
             time.sleep(0.01)
             screen.pop()
-            '''
+            #'''
             touch = f"{event}:{b.name}"
             #if touch != self.last_touch and b.touched(x, y):
             if b.touched(x, y):
@@ -660,11 +665,11 @@ class DetailPage:
         self.dirty = True
         for b in self.buttons:
             #print(x, y, "--", b.x,b.x+b.w, b.y,b.y+b.h)
-            '''
+            #'''
             r = screen.fill_rect(x-2,y-2,4,4, screen.lcd.WHITE)
             time.sleep(0.01)
             screen.pop()
-            '''
+            #'''
             touch = f"{event}:{b.name}"
             #touched = b.touched(x, y)
             #print(b.name, touched)
